@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { auth, currentUser } from '@clerk/nextjs/server';
+export const dynamic = 'force-dynamic';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20' as any,

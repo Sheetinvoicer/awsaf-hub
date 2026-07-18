@@ -4,7 +4,7 @@ import StrategyWizard from './wizard';
 import Paywall from './Paywall';
 import Header from './Header';
 import { prisma } from '@/lib/prisma';
-
+export const dynamic = 'force-dynamic';
 export default async function StrategyPage() {
   // 1. Get logged in user (MUST use await in Clerk v6)
   const { userId } = await auth();

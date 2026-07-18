@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+export const dynamic = 'force-dynamic';
 
 // Key hardcoded for testing (Change this later!)
 const openai = new OpenAI({ apiKey: "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" });
