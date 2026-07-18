@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
+
 export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({ apiKey: "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" });
@@ -8,7 +9,6 @@ const openai = new OpenAI({ apiKey: "sk-proj-7PkWME-uIyta3MgrYiehU2m3ltVki467lE4
 export async function POST(req: Request) {
   try {
     const { tool, data, clerkId, email } = await req.json();
-
 
     let prompt = "";
     if (tool === "roas") {
@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       prompt = `You are a US market trend analyst. Identify the top 3 emerging consumer trends in the "${data.category}" category right now. Respond ONLY with a valid JSON object using these keys: "trend1", "trend2", "trend3", "advice".`;
     }
 
+    // 1. Ask OpenAI for the answer
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
@@ -34,16 +35,21 @@ export async function POST(req: Request) {
 
     const result = JSON.parse(jsonString);
 
-    // Save to Neon Database using Prisma (Module 8.1)
-    await prisma.searchHistory.create({
-      data: {
-        userId: clerkId,
-        tool: tool,
-        input: JSON.stringify(data),
-        output: JSON.stringify(result)
-      }
-    });
+    // 2. Try to save to Neon Database (If it fails, the user still gets their result!)
+    try {
+      await prisma.searchHistory.create({
+        data: {
+          userId: clerkId || email || "guest", // Fallback so it doesn't crash
+          tool: tool,
+          input: JSON.stringify(data),
+          output: JSON.stringify(result)
+        }
+      });
+    } catch (dbError) {
+      console.error("Database save failed, but AI worked:", dbError);
+    }
 
+    // 3. Send result back to the screen
     return NextResponse.json(result);
 
   } catch (error: any) {
