@@ -23,8 +23,8 @@ export async function POST(req: Request) {
       ],
       mode: 'subscription',
       customer_email: email || undefined,
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/strategy?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/strategy?canceled=true`,
+         success_url: `${req.headers.get('origin')}/strategy?success=true`,
+   cancel_url: `${req.headers.get('origin')}/strategy?canceled=true`,
     });
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
