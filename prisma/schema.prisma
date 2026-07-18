@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  clerkId      String   @unique
+  isPremium    Boolean  @default(false)  // <--- ADD THIS LINE
+  createdAt    DateTime @default(now())
+  strategies   Strategy[]
+  tasks        Task[]
+}
+
+model Strategy {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  productName     String
+  niche           String
+  keyword         String
+  budget          Float    // Store their ad budget
+  readinessScore  Int      // The 55/100 score
+  gapAnalysis     String   // The brutal truth bomb
+  isPremium       Boolean  @default(false) // Paid or Free version?
+  createdAt       DateTime @default(now())
+  tasks           Task[]
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  strategyId  String
+  strategy    Strategy @relation(fields: [strategyId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  stepNumber  Int
+  description String
+  isCompleted Boolean  @default(false)
+  dueDate     DateTime // 3 days from creation
+  createdAt   DateTime @default(now())
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  tool      String
+  input     String
+  output    String
+  createdAt DateTime @default(now())
+}
