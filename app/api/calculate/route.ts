@@ -9,7 +9,6 @@ export async function POST(req: Request) {
   try {
     const { tool, data, clerkId, email } = await req.json();
 
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     let prompt = "";
     if (tool === "roas") {

@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { auth, currentUser } from '@clerk/nextjs/server';
+
 export const dynamic = 'force-dynamic';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20' as any,
 });
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const user = await currentUser();
-    const email = user?.emailAddresses[0]?.emailAddress;
+    // Get email directly from the frontend
+    const { email } = await req.json();
 
     // Create the Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -25,7 +22,7 @@ export async function POST() {
         },
       ],
       mode: 'subscription',
-      customer_email: email,
+      customer_email: email || undefined,
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/strategy?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/strategy?canceled=true`,
     });

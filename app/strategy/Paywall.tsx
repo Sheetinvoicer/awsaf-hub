@@ -1,16 +1,25 @@
 "use client";
 import { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 
 export default function Paywall() {
   const [loading, setLoading] = useState(false);
+  const { user } = useUser();
+  const email = user?.emailAddresses[0]?.emailAddress;
 
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' });
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        console.error("Stripe URL missing:", data);
       }
     } catch (e) {
       console.error(e);
