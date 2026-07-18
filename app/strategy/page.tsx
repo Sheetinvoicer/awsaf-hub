@@ -4,18 +4,27 @@ import StrategyWizard from './wizard';
 import Paywall from './Paywall';
 import Header from './Header';
 import { prisma } from '@/lib/prisma';
+
 export const dynamic = 'force-dynamic';
+
 export default async function StrategyPage() {
   // 1. Get logged in user (MUST use await in Clerk v6)
   const { userId } = await auth();
 
-  // 2. Check Neon database to see if they are Premium
+  // 2. Check Neon database to see if they are Premium OR Admin
   let isPremium = false;
   if (userId) {
     const user = await prisma.user.findUnique({
       where: { clerkId: userId }
     });
-    isPremium = user?.isPremium || false;
+    
+    // ADMIN BYPASS: Put your exact login email here
+    const adminEmail = user?.email?.toLowerCase();
+    if (adminEmail === "f3027075@gmail.com" || adminEmail === "feras@awsaftrading.com") {
+      isPremium = true; // You get it for free!
+    } else {
+      isPremium = user?.isPremium || false; // Everyone else pays
+    }
   }
 
   return (
