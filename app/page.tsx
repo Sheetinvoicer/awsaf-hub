@@ -167,7 +167,7 @@ export default function Home() {
       <footer className="relative z-10 mt-auto w-full border-t border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between px-6 py-8 md:flex-row">
           <p className="mb-4 text-sm text-slate-500 md:mb-0">
-            © 2024 AwsafTrading LLC. All rights reserved.
+            © 2026 AwsafTrading LLC. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link
