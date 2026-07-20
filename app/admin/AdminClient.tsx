@@ -13,7 +13,7 @@ type ViewData = {
   country: string | null;
   city: string | null;
   isLoggedIn: boolean;
-  createdAt: string;
+  createdAt: Date; // <--- FIXED: Changed from string to Date
 };
 
 export default function AdminClient({
