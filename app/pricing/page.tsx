@@ -62,8 +62,8 @@ export default function PricingPage() {
           </Card>
 
           {/* PRO PLAN (Highlighted) */}
-          <Card className="relative flex h-full flex-col border-2 border-slate-900 p-8 shadow-xl lg:scale-105">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <Card className="flex h-full flex-col border-2 border-slate-900 p-8 shadow-xl lg:scale-105">
+            <div className="mb-4">
               <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white uppercase">
                 Most Popular
               </span>
@@ -136,7 +136,7 @@ export default function PricingPage() {
       <footer className="relative z-10 mt-auto w-full border-t border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between px-6 py-8 md:flex-row">
           <p className="mb-4 text-sm text-slate-500 md:mb-0">
-            © 2024 AwsafTrading LLC. All rights reserved.
+            © 2026 AwsafTrading LLC. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link
