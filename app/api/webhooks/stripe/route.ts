@@ -24,13 +24,28 @@ export async function POST(req: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const email = session.customer_email;
 
-    // Update the user in Neon to Premium
     if (email) {
-      await prisma.user.updateMany({
-        where: { email },
-        data: { isPremium: true },
-      });
-      console.log(`🎉 User ${email} upgraded to Premium!`);
+      if (session.mode === 'subscription') {
+        // PRO SUBSCRIPTION ($100/mo)
+        await prisma.user.updateMany({
+          where: { email },
+          data: { 
+            isPremium: true,
+            reportsThisMonth: 0,
+            lastReportReset: new Date()
+          },
+        });
+        console.log(`🎉 User ${email} upgraded to Pro!`);
+      } else if (session.mode === 'payment') {
+        // EXTRA REPORT ($25)
+        await prisma.user.updateMany({
+          where: { email },
+          data: { 
+            bonusReports: { increment: 1 } 
+          },
+        });
+        console.log(`💎 User ${email} bought an extra report!`);
+      }
     }
   }
 

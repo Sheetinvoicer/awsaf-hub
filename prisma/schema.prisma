@@ -8,13 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  clerkId      String   @unique
-  isPremium    Boolean  @default(false)  // <--- ADD THIS LINE
-  createdAt    DateTime @default(now())
-  strategies   Strategy[]
-  tasks        Task[]
+  id               String         @id @default(cuid())
+  email            String         @unique
+  clerkId          String         @unique
+  isPremium        Boolean        @default(false)
+  reportsThisMonth Int            @default(0)
+  bonusReports     Int            @default(0)
+  lastReportReset  DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  strategies       Strategy[]
+  tasks            Task[]
+  searchHistory    SearchHistory[]
+  projects         Project[]
 }
 
 model Strategy {
@@ -24,10 +29,10 @@ model Strategy {
   productName     String
   niche           String
   keyword         String
-  budget          Float    // Store their ad budget
-  readinessScore  Int      // The 55/100 score
-  gapAnalysis     String   // The brutal truth bomb
-  isPremium       Boolean  @default(false) // Paid or Free version?
+  budget          Float
+  readinessScore  Int
+  gapAnalysis     String
+  isPremium       Boolean  @default(false)
   createdAt       DateTime @default(now())
   tasks           Task[]
 }
@@ -41,15 +46,37 @@ model Task {
   stepNumber  Int
   description String
   isCompleted Boolean  @default(false)
-  dueDate     DateTime // 3 days from creation
+  dueDate     DateTime
   createdAt   DateTime @default(now())
 }
 
 model SearchHistory {
   id        String   @id @default(cuid())
   userId    String
+  user      User     @relation(fields: [userId], references: [id])
   tool      String
   input     String
   output    String
   createdAt DateTime @default(now())
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  name         String
+  reportData   Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PageView {
+  id         String   @id @default(cuid())
+  userId     String?  // Clerk ID
+  userEmail  String?  // Actual email
+  path       String
+  country    String?
+  city       String?
+  isLoggedIn Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
