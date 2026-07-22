@@ -5,40 +5,47 @@ import { auth } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({ apiKey: "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" });
+const openai = new OpenAI({
+  apiKey:
+    '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'
+});
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     const { step, data } = await req.json();
 
     // --- GUEST LIMIT LOGIC ---
     if (!userId) {
       // 1. Get IP address from Vercel/Next.js headers
       const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-      
+
       // 2. Find or create the guest record
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       let guest = await prisma.guestUsage.upsert({
         where: { ipAddress: ip },
         update: {},
-        create: { ipAddress: ip },
+        create: { ipAddress: ip }
       });
 
       // 3. Reset limit if 24h have passed
       if (guest.lastReset < twentyFourHoursAgo) {
         guest = await prisma.guestUsage.update({
           where: { id: guest.id },
-          data: { apiCalls: 0, lastReset: new Date() },
+          data: { apiCalls: 0, lastReset: new Date() }
         });
       }
 
       // 4. Block them if they hit 5 calls (1 full report)
       if (guest.apiCalls >= 5) {
-        return NextResponse.json({ 
-          error: 'GUEST_LIMIT_REACHED', 
-          message: 'You have used your free guest analysis. Sign up to generate more reports and download the PDF.' 
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            error: 'GUEST_LIMIT_REACHED',
+            message:
+              'You have used your free guest analysis. Sign up to generate more reports and download the PDF.'
+          },
+          { status: 403 }
+        );
       }
 
       // 5. Increment their usage
@@ -49,7 +56,7 @@ export async function POST(req: Request) {
     }
     // -------------------------
 
-    let prompt = "";
+    let prompt = '';
 
     if (step === 1) {
       prompt = `You are an expert global market researcher. A user wants to market a product: "${data.product}" to the focus group/country: "${data.audience}". 
@@ -124,23 +131,22 @@ export async function POST(req: Request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" }
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
     });
 
-    const rawContent = completion.choices[0]?.message?.content || "{}";
+    const rawContent = completion.choices[0]?.message?.content || '{}';
     let jsonString = rawContent;
-    if (rawContent.includes("{")) {
-      jsonString = rawContent.substring(rawContent.indexOf("{"), rawContent.lastIndexOf("}") + 1);
+    if (rawContent.includes('{')) {
+      jsonString = rawContent.substring(rawContent.indexOf('{'), rawContent.lastIndexOf('}') + 1);
     }
 
     const result = JSON.parse(jsonString);
 
     return NextResponse.json(result);
-
   } catch (error: any) {
-    console.error("GROWTH ENGINE ERROR:", error);
-    return NextResponse.json({ error: "Failed to process step." }, { status: 500 });
+    console.error('GROWTH ENGINE ERROR:', error);
+    return NextResponse.json({ error: 'Failed to process step.' }, { status: 500 });
   }
 }
