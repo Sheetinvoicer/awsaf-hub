@@ -11,7 +11,9 @@ import {
   Briefcase,
   Wallet,
   Save,
-  Sparkles
+  Sparkles,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { useState } from 'react';
 import { jsPDF } from 'jspdf';
@@ -21,9 +23,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-// Shared button class to fix text clipping everywhere
+// Premium button class to ensure perfect text wrapping and height adjustment
 const btnClass =
-  'w-full bg-slate-900 hover:bg-slate-800 h-auto py-3 whitespace-normal break-words transition-colors';
+  'w-full bg-slate-900 hover:bg-slate-800 h-auto py-3.5 text-base whitespace-normal break-words transition-colors duration-200';
 
 export default function DashboardClient({ email }: { email: string }) {
   const [step, setStep] = useState(1);
@@ -65,6 +67,7 @@ export default function DashboardClient({ email }: { email: string }) {
       if (stepNum === 5) setBudgetResult(data);
     } catch (e) {
       console.error(e);
+      toast.error('Something went wrong. Please try again.');
     }
     setLoading(false);
   };
@@ -186,7 +189,6 @@ export default function DashboardClient({ email }: { email: string }) {
     addBulletList('Marketing Angles', nicheResult?.marketing_angles || []);
     if (nicheResult?.channels_to_check)
       addBulletList('Leads & Channels', nicheResult.channels_to_check, [37, 99, 235]);
-
     addSectionTitle('2. SEO Strategy');
     addBulletList('Primary Keywords', seoResult?.primary_keywords || []);
     addLabelAndText('Content Strategy', seoResult?.content_strategy);
@@ -194,13 +196,11 @@ export default function DashboardClient({ email }: { email: string }) {
     if (seoResult?.blog_titles) addBulletList('Blog Titles', seoResult.blog_titles, [37, 99, 235]);
     if (seoResult?.landing_page_titles)
       addBulletList('Landing Page Titles', seoResult.landing_page_titles, [37, 99, 235]);
-
     addSectionTitle('3. ROAS Projections');
     addLabelAndText('Ad Platform', platform);
     addLabelAndText('Expected ROAS', roasResult?.expected_roas, [22, 163, 74]);
     addLabelAndText('Expected CPA', roasResult?.expected_cpa);
     addLabelAndText('Justification', roasResult?.justification);
-
     if (bizResult) {
       addSectionTitle('4. Market Analysis');
       addLabelAndText('Market Size', bizResult.market_size);
@@ -225,7 +225,6 @@ export default function DashboardClient({ email }: { email: string }) {
         });
       }
     }
-
     if (budgetResult) {
       doc.addPage();
       y = 20;
@@ -278,7 +277,6 @@ export default function DashboardClient({ email }: { email: string }) {
         });
       }
     }
-
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -293,14 +291,14 @@ export default function DashboardClient({ email }: { email: string }) {
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 md:p-8">
-      {/* Professional Stepper */}
+      {/* Premium Stepper */}
       <div className="mb-12 flex w-full max-w-2xl items-center justify-between">
         {steps.map((label, i) => (
           <div key={i} className="flex flex-1 items-center gap-2">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all ${step >= i + 1 ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-400'}`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all duration-300 ${step >= i + 1 ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-400'}`}
             >
-              {i + 1}
+              {step > i + 1 ? <CheckCircle2 size={16} /> : i + 1}
             </div>
             <span
               className={`hidden text-xs font-medium md:block ${step >= i + 1 ? 'text-slate-900' : 'text-slate-400'}`}
@@ -309,7 +307,7 @@ export default function DashboardClient({ email }: { email: string }) {
             </span>
             {i < 4 && (
               <div
-                className={`h-0.5 flex-1 ${step > i + 1 ? 'bg-slate-900' : 'bg-slate-200'}`}
+                className={`h-0.5 flex-1 transition-colors duration-300 ${step > i + 1 ? 'bg-slate-900' : 'bg-slate-200'}`}
               ></div>
             )}
           </div>
@@ -318,6 +316,7 @@ export default function DashboardClient({ email }: { email: string }) {
 
       <div className="w-full max-w-2xl">
         <AnimatePresence mode="wait">
+          {/* STEP 1 */}
           {step === 1 && (
             <motion.div
               key="step1"
@@ -325,7 +324,7 @@ export default function DashboardClient({ email }: { email: string }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <Card className="border-slate-200 p-8 shadow-md">
+              <Card className="rounded-2xl border-slate-200 p-8 shadow-md">
                 <div className="mb-6 flex items-center gap-3">
                   <div className="rounded-lg bg-slate-100 p-2 text-slate-900">
                     <Globe size={20} />
@@ -334,33 +333,39 @@ export default function DashboardClient({ email }: { email: string }) {
                 </div>
                 <div className="mb-6 space-y-4">
                   <div>
-                    <Label htmlFor="product">Product Details</Label>
+                    <Label htmlFor="product" className="text-slate-600">
+                      Product Details
+                    </Label>
                     <Input
                       id="product"
                       placeholder="e.g. Organic Matcha Green Tea"
                       value={product}
                       onChange={(e) => setProduct(e.target.value)}
-                      className="mt-1"
+                      className="mt-1 border-slate-200 focus:border-slate-900"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="audience">Focus Group / Country</Label>
+                    <Label htmlFor="audience" className="text-slate-600">
+                      Focus Group / Country
+                    </Label>
                     <Input
                       id="audience"
                       placeholder="e.g. Fitness enthusiasts in USA"
                       value={audience}
                       onChange={(e) => setAudience(e.target.value)}
-                      className="mt-1"
+                      className="mt-1 border-slate-200 focus:border-slate-900"
                     />
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={fetchSuggestions}
                       disabled={loadingSuggestions || !product}
-                      className="mt-2"
+                      className="mt-2 border-slate-300 text-slate-600 hover:bg-slate-100"
                     >
                       {loadingSuggestions ? (
-                        'Thinking...'
+                        <>
+                          <Loader2 size={14} className="mr-2 animate-spin" /> Thinking...
+                        </>
                       ) : (
                         <>
                           <Sparkles size={14} className="mr-2" /> Get AI Suggestions
@@ -391,33 +396,49 @@ export default function DashboardClient({ email }: { email: string }) {
                   disabled={loading || !product || !audience || !!nicheResult}
                   className={btnClass}
                 >
-                  {nicheResult
-                    ? 'Generated ✓'
-                    : loading
-                      ? 'Analyzing Market...'
-                      : 'Find My Marketing Route'}
+                  {nicheResult ? (
+                    <>
+                      <CheckCircle2 size={18} className="mr-2" /> Generated
+                    </>
+                  ) : loading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" /> Analyzing Market...
+                    </>
+                  ) : (
+                    'Find My Marketing Route'
+                  )}
                 </Button>
                 {nicheResult && (
                   <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-inner">
-                    <p className="mb-1 text-xs font-bold text-slate-500 uppercase">Best Route:</p>
+                    <p className="mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">
+                      Best Route:
+                    </p>
                     <p className="mb-4 text-xl font-bold text-slate-900">
                       {nicheResult.best_route}
                     </p>
-                    <p className="mb-1 text-xs font-bold text-slate-500 uppercase">Persona:</p>
-                    <p className="mb-4 text-sm text-slate-700">{nicheResult.audience_persona}</p>
+                    <p className="mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">
+                      Persona:
+                    </p>
+                    <p className="mb-4 text-sm leading-relaxed text-slate-700">
+                      {nicheResult.audience_persona}
+                    </p>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setShowNicheAdvanced(!showNicheAdvanced)}
-                      className="mb-4 w-full"
+                      className="mb-4 w-full border-slate-300 text-slate-600 hover:bg-slate-100"
                     >
                       <Link2 size={14} className="mr-2" /> {showNicheAdvanced ? 'Hide' : 'Show'}{' '}
-                      Advanced
+                      Advanced{' '}
+                      <ChevronDown
+                        size={14}
+                        className={`ml-2 transition-transform ${showNicheAdvanced ? 'rotate-180' : ''}`}
+                      />
                     </Button>
                     <AnimatePresence>
                       {showNicheAdvanced && nicheResult.channels_to_check && (
                         <motion.ul
-                          className="mb-4 list-inside list-disc text-sm text-slate-600"
+                          className="mb-4 list-inside list-disc space-y-1 text-sm text-slate-600"
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
@@ -430,7 +451,7 @@ export default function DashboardClient({ email }: { email: string }) {
                     </AnimatePresence>
                     <Button
                       onClick={() => setStep(2)}
-                      className="w-full bg-slate-900 hover:bg-slate-800"
+                      className="h-auto w-full bg-slate-900 py-3 hover:bg-slate-800"
                     >
                       I'm pleased. Plan my SEO <ArrowRight size={16} className="ml-2" />
                     </Button>
@@ -440,6 +461,7 @@ export default function DashboardClient({ email }: { email: string }) {
             </motion.div>
           )}
 
+          {/* STEP 2 */}
           {step === 2 && (
             <motion.div
               key="step2"
@@ -447,7 +469,7 @@ export default function DashboardClient({ email }: { email: string }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <Card className="border-slate-200 p-8 shadow-md">
+              <Card className="rounded-2xl border-slate-200 p-8 shadow-md">
                 <div className="mb-6 flex items-center gap-3">
                   <div className="rounded-lg bg-slate-100 p-2 text-slate-900">
                     <Search size={20} />
@@ -465,11 +487,17 @@ export default function DashboardClient({ email }: { email: string }) {
                   disabled={loading || !!seoResult}
                   className={btnClass}
                 >
-                  {seoResult
-                    ? 'Generated ✓'
-                    : loading
-                      ? 'Researching Keywords...'
-                      : 'Generate SEO Plan'}
+                  {seoResult ? (
+                    <>
+                      <CheckCircle2 size={18} className="mr-2" /> Generated
+                    </>
+                  ) : loading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" /> Researching Keywords...
+                    </>
+                  ) : (
+                    'Generate SEO Plan'
+                  )}
                 </Button>
                 {seoResult && (
                   <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-inner">
@@ -483,11 +511,15 @@ export default function DashboardClient({ email }: { email: string }) {
                         </span>
                       ))}
                     </div>
-                    <p className="mb-1 text-xs font-bold text-slate-500 uppercase">
+                    <p className="mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">
                       Content Strategy:
                     </p>
-                    <p className="mb-4 text-sm text-slate-700">{seoResult.content_strategy}</p>
-                    <p className="mb-1 text-xs font-bold text-slate-500 uppercase">Timeline:</p>
+                    <p className="mb-4 text-sm leading-relaxed text-slate-700">
+                      {seoResult.content_strategy}
+                    </p>
+                    <p className="mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">
+                      Timeline:
+                    </p>
                     <p className="mb-4 text-sm font-bold text-slate-900">
                       {seoResult.expected_timeline}
                     </p>
@@ -495,10 +527,14 @@ export default function DashboardClient({ email }: { email: string }) {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowSeoAdvanced(!showSeoAdvanced)}
-                      className="mb-4 w-full"
+                      className="mb-4 w-full border-slate-300 text-slate-600 hover:bg-slate-100"
                     >
                       <Link2 size={14} className="mr-2" /> {showSeoAdvanced ? 'Hide' : 'Show'} Title
-                      Examples
+                      Examples{' '}
+                      <ChevronDown
+                        size={14}
+                        className={`ml-2 transition-transform ${showSeoAdvanced ? 'rotate-180' : ''}`}
+                      />
                     </Button>
                     <AnimatePresence>
                       {showSeoAdvanced && (
@@ -509,20 +545,20 @@ export default function DashboardClient({ email }: { email: string }) {
                           exit={{ opacity: 0, height: 0 }}
                         >
                           <div>
-                            <p className="mb-2 text-xs font-bold text-slate-500 uppercase">
+                            <p className="mb-2 text-xs font-bold tracking-wide text-slate-500 uppercase">
                               Blog Titles:
                             </p>
-                            <ul className="list-inside list-disc text-sm text-slate-600">
+                            <ul className="list-inside list-disc space-y-1 text-sm text-slate-600">
                               {seoResult.blog_titles?.map((t: string, i: number) => (
                                 <li key={i}>{t}</li>
                               ))}
                             </ul>
                           </div>
                           <div>
-                            <p className="mb-2 text-xs font-bold text-slate-500 uppercase">
+                            <p className="mb-2 text-xs font-bold tracking-wide text-slate-500 uppercase">
                               Landing Page Titles:
                             </p>
-                            <ul className="list-inside list-disc text-sm text-slate-600">
+                            <ul className="list-inside list-disc space-y-1 text-sm text-slate-600">
                               {seoResult.landing_page_titles?.map((t: string, i: number) => (
                                 <li key={i}>{t}</li>
                               ))}
@@ -533,7 +569,7 @@ export default function DashboardClient({ email }: { email: string }) {
                     </AnimatePresence>
                     <Button
                       onClick={() => setStep(3)}
-                      className="w-full bg-slate-900 hover:bg-slate-800"
+                      className="h-auto w-full bg-slate-900 py-3 hover:bg-slate-800"
                     >
                       Calculate my ROAS <ArrowRight size={16} className="ml-2" />
                     </Button>
@@ -543,6 +579,7 @@ export default function DashboardClient({ email }: { email: string }) {
             </motion.div>
           )}
 
+          {/* STEP 3 */}
           {step === 3 && (
             <motion.div
               key="step3"
@@ -550,7 +587,7 @@ export default function DashboardClient({ email }: { email: string }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <Card className="border-slate-200 p-8 shadow-md">
+              <Card className="rounded-2xl border-slate-200 p-8 shadow-md">
                 <div className="mb-6 flex items-center gap-3">
                   <div className="rounded-lg bg-slate-100 p-2 text-slate-900">
                     <Calculator size={20} />
@@ -558,10 +595,12 @@ export default function DashboardClient({ email }: { email: string }) {
                   <h2 className="text-lg font-bold text-slate-900">Step 3: ROAS Calculator</h2>
                 </div>
                 <div className="mb-6">
-                  <Label htmlFor="platform">Ad Platform</Label>
+                  <Label htmlFor="platform" className="text-slate-600">
+                    Ad Platform
+                  </Label>
                   <select
                     id="platform"
-                    className="mt-1 flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                    className="mt-1 flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
                   >
@@ -584,26 +623,36 @@ export default function DashboardClient({ email }: { email: string }) {
                   disabled={loading || !!roasResult}
                   className={btnClass}
                 >
-                  {roasResult
-                    ? 'Generated ✓'
-                    : loading
-                      ? 'Calculating Projections...'
-                      : 'Calculate Expected ROAS'}
+                  {roasResult ? (
+                    <>
+                      <CheckCircle2 size={18} className="mr-2" /> Generated
+                    </>
+                  ) : loading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" /> Calculating Projections...
+                    </>
+                  ) : (
+                    'Calculate Expected ROAS'
+                  )}
                 </Button>
                 {roasResult && (
                   <div className="mt-6 rounded-xl bg-slate-900 p-6 text-center shadow-lg">
-                    <p className="mb-2 text-xs font-bold text-slate-400 uppercase">Expected ROAS</p>
+                    <p className="mb-2 text-xs font-bold tracking-wide text-slate-400 uppercase">
+                      Expected ROAS
+                    </p>
                     <p className="mb-4 text-5xl font-bold text-emerald-400">
                       {roasResult.expected_roas}
                     </p>
-                    <p className="mb-2 text-xs font-bold text-slate-400 uppercase">Expected CPA</p>
+                    <p className="mb-2 text-xs font-bold tracking-wide text-slate-400 uppercase">
+                      Expected CPA
+                    </p>
                     <p className="mb-4 text-xl font-bold text-white">{roasResult.expected_cpa}</p>
                     <p className="mt-4 text-xs text-slate-300 italic">
                       "{roasResult.justification}"
                     </p>
                     <Button
                       onClick={() => setStep(4)}
-                      className="mt-6 w-full bg-white text-slate-900 hover:bg-slate-200"
+                      className="mt-6 h-auto w-full bg-white py-3 text-slate-900 hover:bg-slate-200"
                     >
                       Analyze Market & Competitors <ArrowRight size={16} className="ml-2" />
                     </Button>
@@ -613,6 +662,7 @@ export default function DashboardClient({ email }: { email: string }) {
             </motion.div>
           )}
 
+          {/* STEP 4 */}
           {step === 4 && (
             <motion.div
               key="step4"
@@ -620,7 +670,7 @@ export default function DashboardClient({ email }: { email: string }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <Card className="border-slate-200 p-8 shadow-md">
+              <Card className="rounded-2xl border-slate-200 p-8 shadow-md">
                 <div className="mb-6 flex items-center gap-3">
                   <div className="rounded-lg bg-slate-100 p-2 text-slate-900">
                     <Briefcase size={20} />
@@ -632,11 +682,17 @@ export default function DashboardClient({ email }: { email: string }) {
                   disabled={loading || !!bizResult}
                   className={btnClass}
                 >
-                  {bizResult
-                    ? 'Generated ✓'
-                    : loading
-                      ? 'Analyzing Competitors...'
-                      : 'Generate Market & Competitor Analysis'}
+                  {bizResult ? (
+                    <>
+                      <CheckCircle2 size={18} className="mr-2" /> Generated
+                    </>
+                  ) : loading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" /> Analyzing Competitors...
+                    </>
+                  ) : (
+                    'Generate Market & Competitor Analysis'
+                  )}
                 </Button>
                 {bizResult && (
                   <div className="mt-6 space-y-6">
@@ -649,13 +705,13 @@ export default function DashboardClient({ email }: { email: string }) {
                         {bizResult.market_size}
                       </p>
                       <p className="mb-1 text-xs text-slate-500">Trends:</p>
-                      <ul className="mb-4 list-inside list-disc text-sm text-slate-700">
+                      <ul className="mb-4 list-inside list-disc space-y-1 text-sm text-slate-700">
                         {bizResult.market_trends?.map((t: string, i: number) => (
                           <li key={i}>{t}</li>
                         ))}
                       </ul>
                       <p className="mb-1 text-xs text-slate-500">Challenges:</p>
-                      <ul className="list-inside list-disc text-sm text-rose-600">
+                      <ul className="list-inside list-disc space-y-1 text-sm text-rose-600">
                         {bizResult.market_challenges?.map((c: string, i: number) => (
                           <li key={i}>{c}</li>
                         ))}
@@ -684,7 +740,7 @@ export default function DashboardClient({ email }: { email: string }) {
                     </div>
                     <Button
                       onClick={() => setStep(5)}
-                      className="w-full bg-slate-900 hover:bg-slate-800"
+                      className="h-auto w-full bg-slate-900 py-3 hover:bg-slate-800"
                     >
                       Plan my Budget & Launch <ArrowRight size={16} className="ml-2" />
                     </Button>
@@ -694,6 +750,7 @@ export default function DashboardClient({ email }: { email: string }) {
             </motion.div>
           )}
 
+          {/* STEP 5 */}
           {step === 5 && (
             <motion.div
               key="step5"
@@ -701,7 +758,7 @@ export default function DashboardClient({ email }: { email: string }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <Card className="border-slate-200 p-8 shadow-md">
+              <Card className="rounded-2xl border-slate-200 p-8 shadow-md">
                 <div className="mb-6 flex items-center gap-3">
                   <div className="rounded-lg bg-slate-100 p-2 text-slate-900">
                     <Wallet size={20} />
@@ -723,11 +780,17 @@ export default function DashboardClient({ email }: { email: string }) {
                   disabled={loading || !!budgetResult}
                   className={btnClass}
                 >
-                  {budgetResult
-                    ? 'Generated ✓'
-                    : loading
-                      ? 'Planning Launch...'
-                      : 'Generate Budget & Roadmap'}
+                  {budgetResult ? (
+                    <>
+                      <CheckCircle2 size={18} className="mr-2" /> Generated
+                    </>
+                  ) : loading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" /> Planning Launch...
+                    </>
+                  ) : (
+                    'Generate Budget & Roadmap'
+                  )}
                 </Button>
                 {budgetResult && (
                   <div className="mt-6 space-y-6">
@@ -761,7 +824,7 @@ export default function DashboardClient({ email }: { email: string }) {
                         {budgetResult.launch_phases?.map((phase: any, i: number) => (
                           <div key={i} className="border-l-2 border-slate-900 pl-4">
                             <p className="text-md font-bold text-slate-900">{phase.phase_name}</p>
-                            <ul className="mt-1 list-inside list-disc text-sm text-slate-600">
+                            <ul className="mt-1 list-inside list-disc space-y-1 text-sm text-slate-600">
                               {phase.action_items?.map((action: string, idx: number) => (
                                 <li key={idx}>{action}</li>
                               ))}
@@ -774,13 +837,13 @@ export default function DashboardClient({ email }: { email: string }) {
                       <Button
                         onClick={generatePDF}
                         variant="outline"
-                        className="h-auto w-full border-slate-300 py-3 break-words whitespace-normal hover:bg-slate-100"
+                        className="h-auto w-full border-slate-300 py-3.5 text-base break-words whitespace-normal hover:bg-slate-100"
                       >
                         <Download size={16} className="mr-2" /> Download Full Report (PDF)
                       </Button>
                       <Button
                         onClick={handleSaveProject}
-                        className="h-auto w-full bg-slate-900 py-3 break-words whitespace-normal hover:bg-slate-800"
+                        className="h-auto w-full bg-slate-900 py-3.5 text-base break-words whitespace-normal hover:bg-slate-800"
                       >
                         <Save size={16} className="mr-2" /> Save to My Projects
                       </Button>
