@@ -18,6 +18,7 @@ import {
 import { useState } from 'react';
 import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
+import { useUser, SignInButton } from '@clerk/nextjs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,9 @@ const btnClass =
   'w-full bg-slate-900 hover:bg-slate-800 h-auto py-3.5 text-base whitespace-normal break-words transition-colors duration-200';
 
 export default function DashboardClient({ email }: { email: string }) {
+  const { isSignedIn } = useUser();
+  const [showSignInModal, setShowSignInModal] = useState(false);
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +58,15 @@ export default function DashboardClient({ email }: { email: string }) {
         body: JSON.stringify({ step: stepNum, data: payload })
       });
       const data = await res.json();
+
+      // Catch Guest Limit
+      if (data.error === 'GUEST_LIMIT_REACHED') {
+        toast.error(data.message);
+        setShowSignInModal(true);
+        setLoading(false);
+        return;
+      }
+
       if (stepNum === 1) {
         setNicheResult(data);
         setShowNicheAdvanced(false);
@@ -290,7 +303,38 @@ export default function DashboardClient({ email }: { email: string }) {
   const steps = ['Niche', 'SEO', 'ROAS', 'Market', 'Budget'];
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 md:p-8">
+    <main className="relative flex flex-1 flex-col items-center p-4 md:p-8">
+      {/* GUEST LIMIT SIGN-IN MODAL */}
+      {showSignInModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowSignInModal(false)}
+        >
+          <div
+            className="max-w-sm rounded-xl bg-white p-8 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-2 text-2xl font-bold text-slate-900">Free Limit Reached</h2>
+            <p className="mb-6 text-slate-500">
+              You've used your 5 free AI analyses. Sign up for free to keep generating reports and
+              download your PDF.
+            </p>
+            <SignInButton mode="modal">
+              <Button className="h-auto w-full bg-slate-900 py-3 hover:bg-slate-800">
+                Sign In / Sign Up
+              </Button>
+            </SignInButton>
+            <Button
+              variant="ghost"
+              className="mt-2 text-slate-400"
+              onClick={() => setShowSignInModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Premium Stepper */}
       <div className="mb-12 flex w-full max-w-2xl items-center justify-between">
         {steps.map((label, i) => (
@@ -833,21 +877,39 @@ export default function DashboardClient({ email }: { email: string }) {
                         ))}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-3">
-                      <Button
-                        onClick={generatePDF}
-                        variant="outline"
-                        className="h-auto w-full border-slate-300 py-3.5 text-base break-words whitespace-normal hover:bg-slate-100"
-                      >
-                        <Download size={16} className="mr-2" /> Download Full Report (PDF)
-                      </Button>
-                      <Button
-                        onClick={handleSaveProject}
-                        className="h-auto w-full bg-slate-900 py-3.5 text-base break-words whitespace-normal hover:bg-slate-800"
-                      >
-                        <Save size={16} className="mr-2" /> Save to My Projects
-                      </Button>
-                    </div>
+
+                    {/* GATED SAVE / DOWNLOAD BUTTONS */}
+                    {isSignedIn ? (
+                      <div className="flex flex-col gap-3">
+                        <Button
+                          onClick={generatePDF}
+                          variant="outline"
+                          className="h-auto w-full border-slate-300 py-3.5 text-base break-words whitespace-normal hover:bg-slate-100"
+                        >
+                          <Download size={16} className="mr-2" /> Download Full Report (PDF)
+                        </Button>
+                        <Button
+                          onClick={handleSaveProject}
+                          className="h-auto w-full bg-slate-900 py-3.5 text-base break-words whitespace-normal hover:bg-slate-800"
+                        >
+                          <Save size={16} className="mr-2" /> Save to My Projects
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-xl bg-slate-900 p-6 text-center text-white">
+                        <h3 className="mb-2 text-lg font-bold">
+                          Create a free account to save your work
+                        </h3>
+                        <p className="mb-4 text-sm text-slate-400">
+                          Sign in to download this PDF report and save it to your dashboard.
+                        </p>
+                        <SignInButton mode="modal">
+                          <Button className="h-auto w-full bg-white py-3 text-slate-900 hover:bg-slate-200">
+                            Sign In / Sign Up Free
+                          </Button>
+                        </SignInButton>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>

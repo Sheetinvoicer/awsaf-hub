@@ -80,3 +80,11 @@ model PageView {
   isLoggedIn Boolean  @default(false)
   createdAt  DateTime @default(now())
 }
+
+model GuestUsage {
+  id          String   @id @default(cuid())
+  ipAddress   String   @unique
+  apiCalls    Int      @default(0)
+  lastReset   DateTime @default(now())
+  createdAt   DateTime @default(now())
+}

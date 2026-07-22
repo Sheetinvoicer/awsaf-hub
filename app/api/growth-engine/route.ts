@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,7 +9,45 @@ const openai = new OpenAI({ apiKey: "sk-proj-7PkWME-uIyta3MgrYiehU2m3ltVki467lE4
 
 export async function POST(req: Request) {
   try {
+    const { userId } = auth();
     const { step, data } = await req.json();
+
+    // --- GUEST LIMIT LOGIC ---
+    if (!userId) {
+      // 1. Get IP address from Vercel/Next.js headers
+      const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+      
+      // 2. Find or create the guest record
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      let guest = await prisma.guestUsage.upsert({
+        where: { ipAddress: ip },
+        update: {},
+        create: { ipAddress: ip },
+      });
+
+      // 3. Reset limit if 24h have passed
+      if (guest.lastReset < twentyFourHoursAgo) {
+        guest = await prisma.guestUsage.update({
+          where: { id: guest.id },
+          data: { apiCalls: 0, lastReset: new Date() },
+        });
+      }
+
+      // 4. Block them if they hit 5 calls (1 full report)
+      if (guest.apiCalls >= 5) {
+        return NextResponse.json({ 
+          error: 'GUEST_LIMIT_REACHED', 
+          message: 'You have used your free guest analysis. Sign up to generate more reports and download the PDF.' 
+        }, { status: 403 });
+      }
+
+      // 5. Increment their usage
+      await prisma.guestUsage.update({
+        where: { id: guest.id },
+        data: { apiCalls: { increment: 1 } }
+      });
+    }
+    // -------------------------
 
     let prompt = "";
 
@@ -42,8 +82,7 @@ export async function POST(req: Request) {
         "expected_cpa": "An estimated dollar amount like $25.00",
         "justification": "A 1-sentence explanation of why this ROAS makes sense given the platform and audience."
       }`;
-    }  else if (step === 4) {
-      // Business Analysis
+    } else if (step === 4) {
       prompt = `You are a elite business strategist and analyst. Analyze the market and competition for a product: "${data.product}" targeting "${data.audience}". 
       Provide a realistic market analysis and identify top competitors.
       Respond ONLY with a valid JSON object using exactly these keys:
@@ -52,27 +91,17 @@ export async function POST(req: Request) {
         "market_trends": ["Trend 1", "Trend 2", "Trend 3"],
         "market_challenges": ["Challenge 1", "Challenge 2"],
         "top_competitors": [
-          {
-            "name": "Competitor 1 Name",
-            "strengths": "Their main strength",
-            "weaknesses": "Their main weakness"
-          },
-          {
-            "name": "Competitor 2 Name",
-            "strengths": "Their main strength",
-            "weaknesses": "Their main weakness"
-          }
+          { "name": "Competitor 1 Name", "strengths": "Their main strength", "weaknesses": "Their main weakness" },
+          { "name": "Competitor 2 Name", "strengths": "Their main strength", "weaknesses": "Their main weakness" }
         ]
       }`;
-          } else if (step === 5) {
-      // Accurate Budget Ranges & Launch Roadmap
+    } else if (step === 5) {
       prompt = `You are a Chief Financial Officer and Operations Director. 
       The user is launching "${data.product}" for "${data.audience}".
-      Create a COMPREHENSIVE, REALISTIC business budget analysis based on actual industry rates. 
+      Create a COMPREHENSIVE business budget analysis that covers ALL aspects of the business, not just marketing. 
       - If it is a software/SaaS product, include development costs, cloud infrastructure/hosting, and maintenance.
       - If it is a physical product, include manufacturing, shipping, and inventory costs.
       - Always include Marketing/Ads, Tools/Software, and Operations/Legal costs.
-      
       Provide an accurate Minimum and Maximum cost range for each category to reflect real-world variance (e.g., DIY vs. hiring an agency).
       Then, provide a 30-day launch roadmap from zero to launch that includes product preparation.
       Respond ONLY with a valid JSON object using exactly these keys:
@@ -86,22 +115,10 @@ export async function POST(req: Request) {
           { "category": "Operations/Legal", "min_cost": "$X", "max_cost": "$Y" }
         ],
         "launch_phases": [
-          {
-            "phase_name": "Phase 1: Foundation & Build (Days 1-7)",
-            "action_items": ["Action 1", "Action 2", "Action 3"]
-          },
-          {
-            "phase_name": "Phase 2: Testing & Creative (Days 8-14)",
-            "action_items": ["Action 1", "Action 2", "Action 3"]
-          },
-          {
-            "phase_name": "Phase 3: Pre-Launch & Optimization (Days 15-21)",
-            "action_items": ["Action 1", "Action 2", "Action 3"]
-          },
-          {
-            "phase_name": "Phase 4: Launch & Scale (Days 22-30)",
-            "action_items": ["Action 1", "Action 2", "Action 3"]
-          }
+          { "phase_name": "Phase 1: Foundation & Build (Days 1-7)", "action_items": ["Action 1", "Action 2", "Action 3"] },
+          { "phase_name": "Phase 2: Testing & Creative (Days 8-14)", "action_items": ["Action 1", "Action 2", "Action 3"] },
+          { "phase_name": "Phase 3: Pre-Launch & Optimization (Days 15-21)", "action_items": ["Action 1", "Action 2", "Action 3"] },
+          { "phase_name": "Phase 4: Launch & Scale (Days 22-30)", "action_items": ["Action 1", "Action 2", "Action 3"] }
         ]
       }`;
     }
