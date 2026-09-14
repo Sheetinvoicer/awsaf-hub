@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.19",
+    "@google/generative-ai": "^0.24.1",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/supabase-js": "^2.109.0",
     "class-variance-authority": "^0.7.1",

@@ -1,26 +1,19 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({
-  apiKey:
-    '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'
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
     const { step, data } = await req.json();
 
-    // --- GUEST LIMIT LOGIC ---
     if (!userId) {
-      // 1. Get IP address from Vercel/Next.js headers
       const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-
-      // 2. Find or create the guest record
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       let guest = await prisma.guestUsage.upsert({
         where: { ipAddress: ip },
@@ -28,7 +21,6 @@ export async function POST(req: Request) {
         create: { ipAddress: ip }
       });
 
-      // 3. Reset limit if 24h have passed
       if (guest.lastReset < twentyFourHoursAgo) {
         guest = await prisma.guestUsage.update({
           where: { id: guest.id },
@@ -36,42 +28,42 @@ export async function POST(req: Request) {
         });
       }
 
-      // 4. Block them if they hit 5 calls (1 full report)
       if (guest.apiCalls >= 5) {
         return NextResponse.json(
-          {
-            error: 'GUEST_LIMIT_REACHED',
-            message:
-              'You have used your free guest analysis. Sign up to generate more reports and download the PDF.'
-          },
+          { error: 'GUEST_LIMIT_REACHED', message: 'You have used your free guest analysis. Sign up to generate more reports.' },
           { status: 403 }
         );
       }
 
-      // 5. Increment their usage
       await prisma.guestUsage.update({
         where: { id: guest.id },
         data: { apiCalls: { increment: 1 } }
       });
     }
-    // -------------------------
 
     let prompt = '';
 
     if (step === 1) {
-      prompt = `You are an expert global market researcher. A user wants to market a product: "${data.product}" to the focus group/country: "${data.audience}". 
-      Analyze this and find the single best route of marketing suitable for this product in that specific region.
-      Also, provide specific channels, websites, or communities where the user can find leads or research this niche.
-      Respond ONLY with a valid JSON object using exactly these keys:
-      {
-        "best_route": "Name of the best marketing platform",
-        "audience_persona": "A 1-sentence description of the exact person to target",
-        "marketing_angles": ["Angle 1", "Angle 2", "Angle 3"],
-        "channels_to_check": ["Specific website/community 1", "Specific website/community 2", "Specific website/community 3"]
-      }`;
+      prompt = `You are an expert global market researcher helping a founder launch a product.
+
+PRODUCT: "${data.product}"
+TARGET MARKET / GEOGRAPHY: "${data.audience}"
+
+CRITICAL RULES (do not break these):
+1. GEOGRAPHY FIRST: The target market "${data.audience}" is the PRIMARY constraint. All suggested audiences, channels, and marketing routes MUST be relevant to that specific geography. If the product name is in a different language (Arabic, Chinese, etc.), DO NOT assume the target market is that language's country — the geography input wins.
+2. If the product and the target market seem unrelated (e.g., selling tea to a taxi business), do NOT ignore it. Instead, interpret it intelligently — find the most logical way the product could serve that audience, and explain the angle.
+3. Be specific. Name real platforms, real communities, real websites that exist and are used in that geography.
+4. Do NOT hallucinate platform names. If unsure, use widely-known ones (Google, Meta, LinkedIn, TikTok, Reddit, X).
+
+Respond ONLY with a valid JSON object using exactly these keys:
+{
+  "best_route": "The single best marketing platform for THIS product in THIS geography, with a short justification",
+  "audience_persona": "A 1-sentence description of the exact person to target (must match the geography)",
+  "marketing_angles": ["Angle 1 relevant to this geography", "Angle 2", "Angle 3"],
+  "channels_to_check": ["Real website/community 1", "Real website/community 2", "Real website/community 3"]
+}`;
     } else if (step === 2) {
       prompt = `You are an elite SEO strategist. Based on the product "${data.product}", the target audience in "${data.audience}", and the chosen marketing route "${data.best_route}", create a targeted SEO plan.
-      Also, provide concrete examples of Blog Titles and Landing Page Titles optimized for these keywords.
       Respond ONLY with a valid JSON object using exactly these keys:
       {
         "primary_keywords": ["Keyword 1", "Keyword 2", "Keyword 3"],
@@ -82,7 +74,6 @@ export async function POST(req: Request) {
       }`;
     } else if (step === 3) {
       prompt = `You are a master media buyer. The user is running ads on "${data.platform}" for their product "${data.product}" in "${data.audience}". They are using an SEO plan targeting keywords like "${data.keywords}".
-      Calculate the expected Return on Ad Spend (ROAS) and Cost Per Acquisition (CPA) for this specific platform.
       Respond ONLY with a valid JSON object using exactly these keys:
       {
         "expected_roas": "A number like 3.5x or 4.2x",
@@ -90,11 +81,10 @@ export async function POST(req: Request) {
         "justification": "A 1-sentence explanation of why this ROAS makes sense given the platform and audience."
       }`;
     } else if (step === 4) {
-      prompt = `You are a elite business strategist and analyst. Analyze the market and competition for a product: "${data.product}" targeting "${data.audience}". 
-      Provide a realistic market analysis and identify top competitors.
+      prompt = `You are an elite business strategist and analyst. Analyze the market and competition for a product: "${data.product}" targeting "${data.audience}". 
       Respond ONLY with a valid JSON object using exactly these keys:
       {
-        "market_size": "Estimated market size or potential (e.g., '$10B industry, growing 5% YoY')",
+        "market_size": "Estimated market size or potential",
         "market_trends": ["Trend 1", "Trend 2", "Trend 3"],
         "market_challenges": ["Challenge 1", "Challenge 2"],
         "top_competitors": [
@@ -109,8 +99,6 @@ export async function POST(req: Request) {
       - If it is a software/SaaS product, include development costs, cloud infrastructure/hosting, and maintenance.
       - If it is a physical product, include manufacturing, shipping, and inventory costs.
       - Always include Marketing/Ads, Tools/Software, and Operations/Legal costs.
-      Provide an accurate Minimum and Maximum cost range for each category to reflect real-world variance (e.g., DIY vs. hiring an agency).
-      Then, provide a 30-day launch roadmap from zero to launch that includes product preparation.
       Respond ONLY with a valid JSON object using exactly these keys:
       {
         "total_min_budget": "$X,XXX",
@@ -130,23 +118,22 @@ export async function POST(req: Request) {
       }`;
     }
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+      generationConfig: { responseMimeType: "application/json" },
     });
 
-    const rawContent = completion.choices[0]?.message?.content || '{}';
+    const aiResult = await model.generateContent(prompt);
+    const rawContent = aiResult.response.text();
     let jsonString = rawContent;
     if (rawContent.includes('{')) {
       jsonString = rawContent.substring(rawContent.indexOf('{'), rawContent.lastIndexOf('}') + 1);
     }
 
     const result = JSON.parse(jsonString);
-
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('GROWTH ENGINE ERROR:', error);
+    console.error('GROWTH ENGINE ERROR:', error?.message || error);
     return NextResponse.json({ error: 'Failed to process step.' }, { status: 500 });
   }
 }

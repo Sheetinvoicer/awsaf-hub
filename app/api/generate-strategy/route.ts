@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/prisma';
+
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({ apiKey: "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" });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    // 1. Get data, clerkId, and email from the frontend
     const { product, audience, industry, keyword, budget, clerkId, email } = await req.json();
     const numBudget = parseFloat(budget);
 
@@ -35,14 +35,13 @@ export async function POST(req: Request) {
       ]
     }`;
 
-    // 2. Ask OpenAI for the answer
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+      generationConfig: { responseMimeType: "application/json" },
     });
 
-    const rawContent = completion.choices[0]?.message?.content || "{}";
+    const aiResult = await model.generateContent(prompt);
+    const rawContent = aiResult.response.text();
     let jsonString = rawContent;
     if (rawContent.includes("{")) {
       jsonString = rawContent.substring(rawContent.indexOf("{"), rawContent.lastIndexOf("}") + 1);
@@ -50,11 +49,9 @@ export async function POST(req: Request) {
 
     const result = JSON.parse(jsonString);
 
-    // Clean up the score
     const scoreMatch = String(result.audit_score || "").match(/\d+/);
     const cleanScore = scoreMatch ? parseInt(scoreMatch[0]) : 50;
 
-    // 3. Save to Neon Database
     const dbUser = await prisma.user.upsert({
       where: { clerkId },
       update: { email },
@@ -89,7 +86,6 @@ export async function POST(req: Request) {
     );
     const taskIds = createdTasks.map(task => task.id);
 
-    // 4. The Trojan Horse (Slack Alert)
     if (numBudget >= 10000 && process.env.SLACK_WEBHOOK_URL) {
       try {
         await fetch(process.env.SLACK_WEBHOOK_URL, {
@@ -104,7 +100,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. Send result back to the screen
     return NextResponse.json({
       ...result,
       audit_score: cleanScore.toString(),
@@ -113,7 +108,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("STRATEGY API ERROR:", error);
+    console.error("STRATEGY API ERROR:", error?.message || error);
     return NextResponse.json({ 
       error: "Failed to generate strategy.",
       audit_score: "Error",

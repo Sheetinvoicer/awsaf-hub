@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({ apiKey: "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" });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
@@ -15,24 +15,22 @@ export async function POST(req: Request) {
     Suggest 5 highly specific, distinct target audiences or focus groups (including geography if relevant) that would be perfect for this product.
     Respond ONLY with a valid JSON object using exactly this key: {"audiences": ["Audience 1", "Audience 2", "Audience 3", "Audience 4", "Audience 5"]}.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+      generationConfig: { responseMimeType: "application/json" },
     });
 
-    const rawContent = completion.choices[0]?.message?.content || "{}";
+    const aiResult = await model.generateContent(prompt);
+    const rawContent = aiResult.response.text();
     let jsonString = rawContent;
     if (rawContent.includes("{")) {
       jsonString = rawContent.substring(rawContent.indexOf("{"), rawContent.lastIndexOf("}") + 1);
     }
 
     const result = JSON.parse(jsonString);
-
     return NextResponse.json(result);
-
   } catch (error: any) {
-    console.error("SUGGESTION API ERROR:", error);
+    console.error("SUGGESTION API ERROR:", error?.message || error);
     return NextResponse.json({ error: "Failed to get suggestions." }, { status: 500 });
   }
 }
