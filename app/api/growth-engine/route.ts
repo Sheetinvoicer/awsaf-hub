@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     if (!userId) {
       const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
       let guest = await prisma.guestUsage.upsert({
         where: { ipAddress: ip },
         update: {},
@@ -51,7 +52,7 @@ TARGET MARKET / GEOGRAPHY: "${data.audience}"
 
 CRITICAL RULES (do not break these):
 1. GEOGRAPHY FIRST: The target market "${data.audience}" is the PRIMARY constraint. All suggested audiences, channels, and marketing routes MUST be relevant to that specific geography. If the product name is in a different language (Arabic, Chinese, etc.), DO NOT assume the target market is that language's country — the geography input wins.
-2. If the product and the target market seem unrelated (e.g., selling tea to a taxi business), do NOT ignore it. Instead, interpret it intelligently — find the most logical way the product could serve that audience, and explain the angle.
+2. If the product and the target market seem unrelated, do NOT ignore it. Interpret it intelligently — find the most logical way the product could serve that audience, and explain the angle.
 3. Be specific. Name real platforms, real communities, real websites that exist and are used in that geography.
 4. Do NOT hallucinate platform names. If unsure, use widely-known ones (Google, Meta, LinkedIn, TikTok, Reddit, X).
 

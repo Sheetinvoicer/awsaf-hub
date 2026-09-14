@@ -93,7 +93,7 @@ export default function DashboardClient({ email }: { email: string }) {
       const res = await fetch('/api/suggest-audience', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product })
+        body: JSON.stringify({ product, audience })
       });
       const data = await res.json();
       if (data.audiences) setSuggestions(data.audiences);
